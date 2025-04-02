@@ -1,5 +1,7 @@
 <img src="NS-Forest-sticker.png" width="110" height="125">
 
+[![Docker Image CI](https://github.com/adeslatt/NSForest/actions/workflows/docker-image.yml/badge.svg)](https://github.com/adeslatt/NSForest/actions/workflows/docker-image.yml)
+
 # NS-Forest v4.1
 
 Documentation: https://nsforest.readthedocs.io/en/latest/
