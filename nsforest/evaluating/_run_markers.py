@@ -1,16 +1,17 @@
 
-# from IPython.core.debugger import set_trace
+from IPython.core.debugger import set_trace
 import os
 import time
 import pandas as pd
 from nsforest.nsforesting import mydecisiontreeevaluation
 from nsforest.nsforesting import calculate_fraction
+from nsforest.utils import build_varm_key
 
-def DecisionTree(adata, cluster_header, markers_dict, *, medians_header = "medians_", 
+def DecisionTree(adata, cluster_header, markers_dict, *, medians_header = "medians_", test = 0, 
                  beta = 0.5, combinations = False, individual_markers = False, use_mean = False,
                  save = False, save_supplementary = False, output_folder = "", outputfilename_prefix = ""): 
     """\
-    Calculating sklearn.metrics's fbeta_score, precision_score, recall_score, and confusion_matrix for each clusterName: markers in `markers_dict`. 
+    Calculating sklearn.metrics's fbeta_score, precision_score, recall_score, and confusion_matrix for `genes_eval`. 
 
     Parameters
     ----------
@@ -25,7 +26,7 @@ def DecisionTree(adata, cluster_header, markers_dict, *, medians_header = "media
         beta: float (default: 0.5)
             `beta` parameter in sklearn.metrics's fbeta_score. 
         combinations: bool (default: False)
-            Whether to find the combination of markers with the highest fbeta_score. 
+            Whether to find the combination of `genes_eval` with the highest fbeta_score. 
         use_mean: bool (default: False)
             Whether to use the mean (vs median) for minimum gene expression threshold. 
         save: bool (default: False)
@@ -45,7 +46,10 @@ def DecisionTree(adata, cluster_header, markers_dict, *, medians_header = "media
     from nsforest import NSFOREST_VERSION
     print(f"Running NS-Forest version {NSFOREST_VERSION}")
     # default medians_header
-    if medians_header == "medians_": medians_header = "medians_" + cluster_header
+    if medians_header == "medians_":
+        # Ensure the medians_header used with adata.varm is HDF5-safe
+        medians_header = build_varm_key("medians", cluster_header)
+        
     # Creating directory if does not exist
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -158,7 +162,7 @@ def DecisionTree(adata, cluster_header, markers_dict, *, medians_header = "media
 
 def add_fraction(adata, df_results, cluster_header, medians_header = "medians_", use_mean = False, save_supplementary = False, output_folder = "", outputfilename_prefix = ""): 
     """\
-    Calculating sklearn.metrics's fbeta_score, sklearn.metrics's prevision_score, sklearn.metrics's confusion_matrix for each clusterName: markers in `markers_dict`. 
+    Calculating sklearn.metrics's fbeta_score, sklearn.metrics's prevision_score, sklearn.metrics's confusion_matrix for each `genes_eval` combination. 
     Returning set of genes and scores with highest score sum. 
 
     Parameters
@@ -183,8 +187,10 @@ def add_fraction(adata, df_results, cluster_header, medians_header = "medians_",
     df_results: pd.DataFrame of the NS-Forest results. Contains classification metrics (f_score, precision, recall, onTarget). 
     """
 
-    # default medians_header
-    if medians_header == "medians_": medians_header = "medians_" + cluster_header
+    # default medians_header key - 
+    if medians_header == "medians_":
+        # Ensure the medians_header used with adata.varm is HDF5-safe
+        medians_header = build_varm_key("medians", cluster_header)
 
     markers_dict = dict(zip(df_results["clusterName"], df_results["markers"]))
     on_target_ratio = calculate_fraction.markers_onTarget(adata, markers_dict, cluster_header, medians_header, use_mean, save_supplementary, output_folder, outputfilename_prefix)

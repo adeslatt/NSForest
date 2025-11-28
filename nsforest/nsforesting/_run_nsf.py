@@ -5,6 +5,7 @@ import pandas as pd
 from nsforest.nsforesting import myrandomforest
 from nsforest.nsforesting import mydecisiontreeevaluation
 from nsforest.nsforesting import calculate_fraction
+from nsforest.utils import build_varm_key, store_key_mapping
 
 def NSForest(adata, cluster_header, *, medians_header = "medians_", binary_scores_header = "binary_scores_", 
              cluster_list = [], gene_selection = "BinaryFirst_high",
@@ -56,10 +57,10 @@ def NSForest(adata, cluster_header, *, medians_header = "medians_", binary_score
     from nsforest import NSFOREST_VERSION
     print(f"Running NS-Forest version {NSFOREST_VERSION}")
     # default medians_header and binary_scores_header
-    if medians_header == "medians_": medians_header = "medians_" + cluster_header
-    if binary_scores_header == "binary_scores_": binary_scores_header = "binary_scores_" + cluster_header
+    if medians_header == "medians_": medians_header = build_varm_key("medians",cluster_header)
+    if binary_scores_header == "binary_scores_": binary_scores_header = build_varm_key("binary_scores",cluster_header)
     # Creating directory if does not exist
-    if save and not os.path.exists(output_folder):
+    if not os.path.exists(output_folder):
         os.makedirs(output_folder)
         print(f"Creating new directory...\n{output_folder}")
 
@@ -153,10 +154,7 @@ def NSForest(adata, cluster_header, *, medians_header = "medians_", binary_score
         n_binary_genes_cl = n_binary_genes
         n_genes_eval_cl = n_genes_eval
 
-        top_rf_genes = myrandomforest.myRandomForest(adata, df_dummies, cl, n_trees, n_jobs, n_top_genes, binary_dummies)    
-        if len(top_rf_genes) == 0: 
-            print("WARNING: 0 genes to feed into Random Forest. Skipping...")
-            continue
+        top_rf_genes = myrandomforest.myRandomForest(adata, df_dummies, cl, n_trees, n_jobs, n_top_genes, binary_dummies)      
         ## filter out negative genes by thresholding median>0 ==> to prevent dividing by 0 in binary score calculation
         top_gene_medians = cluster_medians.loc[cl,top_rf_genes.index]
         top_rf_genes_positive = top_gene_medians[top_gene_medians>0]
@@ -230,7 +228,7 @@ def NSForest(adata, cluster_header, *, medians_header = "medians_", binary_score
     
     if not df_results.empty:
         markers_dict = dict(zip(df_results["clusterName"], df_results["NSForest_markers"]))
-        on_target_ratio = calculate_fraction.markers_onTarget(adata, cluster_header, markers_dict, save_supplementary = save_supplementary, output_folder = output_folder, outputfilename_prefix = outputfilename_prefix)
+        on_target_ratio = calculate_fraction.markers_onTarget(adata, cluster_header, markers_dict, medians_header, save_supplementary = save_supplementary, output_folder = output_folder, outputfilename_prefix = outputfilename_prefix)
         df_results = df_results.merge(on_target_ratio, on = "clusterName", how = "left")
     
     if save: 

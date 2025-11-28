@@ -6,9 +6,10 @@ from tqdm import tqdm # may have to play with "import tqdm" vs "from tqdm import
 import matplotlib.pyplot as plt
 import scanpy as sc
 import logging
+from nsforest.utils import build_varm_key
 
-def dendrogram(adata, cluster_header, *, tl_kwargs = {}, pl_kwargs = {}, save = False, figsize = (12, 2), 
-               output_folder = "", outputfilename_suffix = ""): 
+def dendrogram(adata, cluster_header, *, plot = False, save = False, figsize = (12, 2), 
+               output_folder = "", outputfilename_suffix = "", **kwargs): 
     """\
     Generating a dendrogram from the AnnData object. 
 
@@ -18,10 +19,8 @@ def dendrogram(adata, cluster_header, *, tl_kwargs = {}, pl_kwargs = {}, save = 
             Annotated data matrix.
         cluster_header: str
             Column in `adata.obs` storing cell annotation. Passed into scanpy's dendrogram as `groupby`.
-        tl_kwargs: dict
-            Additional parameters to pass to sc.tl.dendrogram.
-        pl_kwargs: dict
-            Additional parameters to pass to sc.pl.dendrogram.
+        plot: bool (default: False)
+            Whether to use sc.pl.dendrogram instead of sc.tl.dendrogram. 
         save: bool | str (default: False)
             Whether to save plot in `output_folder`. If string, choose the type of file to save as ('png'(default), 'svg', 'pdf).
         figsize: tuple (default: (12, 2))
@@ -30,6 +29,8 @@ def dendrogram(adata, cluster_header, *, tl_kwargs = {}, pl_kwargs = {}, save = 
             Output folder. Created if doesn't exist. 
         outputfilename_suffix: str (default: "")
             Suffix for all output files. 
+        kwargs: dictionary (default: None)
+            Additional parameters to pass to sc.tl.dendrogram or sc.pl.dendrogram.
     
     Returns
     -------
@@ -44,9 +45,11 @@ def dendrogram(adata, cluster_header, *, tl_kwargs = {}, pl_kwargs = {}, save = 
             save = "png"
         sc.settings.figdir = output_folder
         save = f"_{outputfilename_suffix}.{save}"
-    sc.tl.dendrogram(adata, cluster_header, **tl_kwargs)
-    with plt.rc_context({"figure.figsize": figsize}): 
-        sc.pl.dendrogram(adata, cluster_header, save = save, **pl_kwargs)
+    if not plot: # default no plot, no save
+        sc.tl.dendrogram(adata, cluster_header, **kwargs)
+    else: 
+        with plt.rc_context({"figure.figsize": figsize}): 
+            sc.pl.dendrogram(adata, cluster_header, save = save, **kwargs)
     return
 
 def get_medians(adata, cluster_header, use_mean = False): 
@@ -91,6 +94,18 @@ def prep_medians(adata, cluster_header, use_mean = False, positive_genes_only = 
             Whether to use the mean (vs median) for minimum gene expression threshold. 
         positive_genes_only: bool (default: True)
             Whether to subset AnnData to only have genes with median/mean expression greater than 0. 
+    Note
+    ----
+        Because we may get cluster_header names that contain problematic characters such as "/"
+        we introduce functions build_varm_key, make_safe_key, recover_original_key and store_key_mapping as a
+        defensive programming tactic.
+
+        This is important because behind the adata object h5py will interpret a "/" and other characters
+        and cause a break.  The "/" in particular is treated as a sub group.  So when an adata.varm is
+        called with a cluster_header such as "vmsc/p", it will try to create a subgroup "p" with "vmsc".
+
+        To guard against this and to reverse this defense we will make the key safe for underlying library
+        calls and then preserve this by recovering the original name.
     
     Returns
     -------
@@ -103,9 +118,15 @@ def prep_medians(adata, cluster_header, use_mean = False, positive_genes_only = 
     if use_mean: 
         print("use_mean is True. Using the mean expression of each gene per cluster. ")
     cluster_medians = get_medians(adata, cluster_header, use_mean) #gene-by-cluster
+    
     ## attach calculated medians to adata
-    print("Saving calculated medians as adata.varm.medians_" + cluster_header)
-    adata.varm['medians_' + cluster_header] = cluster_medians #gene-by-cluster
+    medians_key = build_varm_key("medians", cluster_header)
+
+    adata.varm[medians_key] = cluster_medians #gene-by-cluster
+    store_key_mapping(adata, cluster_header, medians_key)
+
+    print("Saving calculated medians as adata.varm.medians_" + safe_cluster_key + "derived from " + cluster_header)
+    
     print("--- %s seconds ---" % (time.time() - start_time))
     print("median:", cluster_medians.stack().median())
     print("mean:", cluster_medians.stack().mean())
@@ -157,7 +178,9 @@ def prep_binary_scores(adata, cluster_header, medians_header = "medians_"):
     binary_scores = pd.DataFrame(binary_scores, index=cluster_medians.index, columns=cluster_medians.columns).fillna(0) #cluster-by-gene
     ## attach pre-calculated binary scores to adata
     print("Saving calculated binary scores as adata.varm.binary_scores_" + cluster_header)
-    adata.varm['binary_scores_' + cluster_header] = binary_scores.transpose() #gene-by-cluster
+    binary_scores_key = build_varm_key("binary_scores", cluster_header)
+    store_key_mapping(adata, cluster_header, binary_key)
+    
     print("--- %s seconds ---" % (time.time() - start_time))
     print("median:", binary_scores.stack().median())
     print("mean:", binary_scores.stack().mean())

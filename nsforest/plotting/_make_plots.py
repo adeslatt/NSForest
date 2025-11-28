@@ -3,6 +3,7 @@ import pandas as pd
 import scanpy as sc
 import plotly.express as px
 import matplotlib.pyplot as plt
+from nsforest.utils import get_original_key, reverse_key_list
 
 def boxplot(df, col, save = False, output_folder = "", outputfilename_prefix = ""): 
     """\
@@ -111,9 +112,41 @@ def dotplot(adata, markers, cluster_header, *, dendrogram = True, save = False,
             print(f"ERROR: invalid file extension: {save}")
             save = False
     if isinstance(dendrogram, bool): # gene_symbols = gene_symbols, use_raw = False, standard_scale = "var", 
-        sc.pl.dotplot(adata, markers, cluster_header, dendrogram = dendrogram, save = save, **kwargs)
+# old.removed       sc.pl.dotplot(adata, markers, cluster_header, dendrogram = dendrogram, save = save, **kwargs)
+        
+        # Recover the original (human-readable) cluster names from encoded keys.
+        # This ensures that axis labels and dendrogram categories display correctly,
+        # even if internal keys were sanitized for compatibility with AnnData varm.        
+        groupby_key = cluster_header
+        dendrogram = reverse_key_list(adata, dendrogram)
+
+        sc.pl.dotplot(
+            adata,
+            markers,
+            groupby_key,
+            dendrogram=dendrogram,
+            save=save,
+            **kwargs
+        )
+
     elif isinstance(dendrogram, list): 
-        sc.pl.dotplot(adata, markers, cluster_header, categories_order = dendrogram, save = save, **kwargs)
+#old.removed       sc.pl.dotplot(adata, markers, cluster_header, categories_order = dendrogram, save = save, **kwargs)
+        
+        # Recover the original (human-readable) cluster names from encoded keys.
+        # This ensures that axis labels and dendrogram categories display correctly,
+        # even if internal keys were sanitized for compatibility with AnnData varm.        
+        groupby_key = get_original_key(adata, cluster_header)
+        dendrogram = reverse_key_list(adata, dendrogram)
+
+            sc.pl.dotplot(
+                adata,
+                markers,
+                groupby_key,
+                categories_order=dendrogram,
+                save=save,
+                **kwargs
+            )
+
     return 
 
 def stackedviolin(adata, markers, cluster_header, *, dendrogram = True, save = False, 
@@ -149,10 +182,42 @@ def stackedviolin(adata, markers, cluster_header, *, dendrogram = True, save = F
         else: 
             print(f"ERROR: invalid file extension: {save}")
             save = False
-    if isinstance(dendrogram, bool): # gene_symbols = gene_symbols, use_raw = False, standard_scale = "var", 
-        sc.pl.stacked_violin(adata, markers, cluster_header, dendrogram = dendrogram, save = save, **kwargs)
+    if isinstance(dendrogram, bool): # gene_symbols = gene_symbols, use_raw = False, standard_scale = "var",
+#        sc.pl.stacked_violin(adata, markers, cluster_header, dendrogram = dendrogram, save = save, **kwargs)
+        
+        # Recover the original (human-readable) cluster names from encoded keys.
+        # This ensures that axis labels and dendrogram categories display correctly,
+        # even if internal keys were sanitized for compatibility with AnnData varm.        
+        groupby_key = get_original_key(adata, cluster_header)
+        dendrogram = reverse_key_list(adata, dendrogram)
+
+        sc.pl.stacked_violin(
+            adata,
+            markers,
+            groupby_key,
+            dendrogram=dendrogram,
+            save=save,
+            **kwargs
+        )
+
     elif isinstance(dendrogram, list): 
-        sc.pl.stacked_violin(adata, markers, cluster_header, categories_order = dendrogram, save = save, **kwargs)
+# old - removed  sc.pl.stacked_violin(adata, markers, cluster_header, categories_order = dendrogram, save = save, **kwargs)
+        
+        # Recover the original (human-readable) cluster names from encoded keys.
+        # This ensures that axis labels and dendrogram categories display correctly,
+        # even if internal keys were sanitized for compatibility with AnnData varm.
+        groupby_key = get_original_key(adata, cluster_header)
+        dendrogram = reverse_key_list(adata, dendrogram)
+
+        sc.pl.stacked_violin(
+            adata,
+            markers,
+            groupby_key,
+            categories_order=dendrogram,
+            save=save,
+            **kwargs
+        )
+
     return
 
 def matrixplot(adata, markers, cluster_header, *, dendrogram = True, save = False, 
@@ -189,7 +254,38 @@ def matrixplot(adata, markers, cluster_header, *, dendrogram = True, save = Fals
             print(f"ERROR: invalid file extension: {save}")
             save = False
     if isinstance(dendrogram, bool): # heatmap # gene_symbols = gene_symbols, use_raw = False, standard_scale = "var", 
-        sc.pl.matrixplot(adata, markers, cluster_header, dendrogram = dendrogram, save = save, **kwargs)
+# old.remove        sc.pl.matrixplot(adata, markers, cluster_header, dendrogram = dendrogram, save = save, **kwargs)
+        # Recover the original (human-readable) cluster names from encoded keys.
+        # This ensures that axis labels and dendrogram categories display correctly,
+        # even if internal keys were sanitized for compatibility with AnnData varm.        
+        groupby_key = get_original_key(adata, cluster_header)
+        dendrogram = reverse_key_list(adata, dendrogram)
+
+        sc.pl.matrixplot(
+            adata,
+            markers,
+            groupby_key,
+            dendrogram=dendrogram,
+            save=save,
+            **kwargs
+        )
+        
     elif isinstance(dendrogram, list): 
-        sc.pl.matrixplot(adata, markers, cluster_header, categories_order = dendrogram, save = save, **kwargs)
+# old.remove        sc.pl.matrixplot(adata, markers, cluster_header, categories_order = dendrogram, save = save, **kwargs)
+        
+        # Recover the original (human-readable) cluster names from encoded keys.
+        # This ensures that axis labels and dendrogram categories display correctly,
+        # even if internal keys were sanitized for compatibility with AnnData varm.
+        groupby_key = get_original_key(adata, cluster_header)
+        dendrogram = reverse_key_list(adata, dendrogram)
+
+        sc.pl.matrixplot(
+            adata,
+            markers,
+            groupby_key,
+            categories_order=dendrogram,
+            save=save,
+            **kwargs
+        )
+
     return
