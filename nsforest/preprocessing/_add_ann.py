@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import scanpy as sc
 import logging
 from nsforest.utils import build_varm_key
+from nsforest.utils import make_safe_key, store_key_mapping
 
 def dendrogram(adata, cluster_header, *, plot = False, save = False, figsize = (12, 2), 
                output_folder = "", outputfilename_suffix = "", **kwargs): 
@@ -70,14 +71,21 @@ def get_medians(adata, cluster_header, use_mean = False):
     cluster_medians: pd.DataFrame
         Gene-by-cluster median (mean) expression dataframe. 
     """
-    cluster_medians = pd.DataFrame()
     for cl in tqdm(sorted(set(adata.obs[cluster_header])), desc="Calculating medians (means) per cluster"):
         adata_cl = adata[adata.obs[cluster_header]==cl,]
         if use_mean: 
-            medians_cl = adata_cl.to_df().mean()
+            expr_cl = adata_cl.to_df().mean()
         else: 
-            medians_cl = adata_cl.to_df().median()
-        cluster_medians = pd.concat([cluster_medians, pd.DataFrame({cl: medians_cl})], axis=1) #gene-by-cluster
+            expr_cl = adata_cl.to_df().median()
+
+        safe_cl = make_safe_key(cl)
+        store_key_mapping(adata, cl, safe_cl)
+        
+        cluster_medians[safe_cl] = expr_cl
+
+        print(cluster_medians.shape)  # should be (n_genes, n_clusters)
+        print(cluster_medians.columns[:5])  # should show safe keys
+
     return cluster_medians
 
 def prep_medians(adata, cluster_header, use_mean = False, positive_genes_only = True):
