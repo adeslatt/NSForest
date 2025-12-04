@@ -71,22 +71,28 @@ def get_medians(adata, cluster_header, use_mean = False):
     cluster_medians: pd.DataFrame
         Gene-by-cluster median (mean) expression dataframe. 
     """
-    for cl in tqdm(sorted(set(adata.obs[cluster_header])), desc="Calculating medians (means) per cluster"):
-        adata_cl = adata[adata.obs[cluster_header]==cl,]
-        if use_mean: 
+    cluster_labels = sorted(set(adata.obs[cluster_header]))
+    cluster_medians = pd.DataFrame(index=adata.var_names)
+
+    for cl in tqdm(cluster_labels, desc="Calculating medians (means) per cluster"):
+
+        adata_cl = adata[adata.obs[cluster_header] == cl, :]
+        
+        if use_mean:
             expr_cl = adata_cl.to_df().mean()
-        else: 
+        else:
             expr_cl = adata_cl.to_df().median()
 
         safe_cl = make_safe_key(cl)
         store_key_mapping(adata, cl, safe_cl)
-        
         cluster_medians[safe_cl] = expr_cl
 
-        print(cluster_medians.shape)  # should be (n_genes, n_clusters)
-        print(cluster_medians.columns[:5])  # should show safe keys
+        # Optional debug prints (now after the full loop)
+        print(f"Final cluster_medians shape: {cluster_medians.shape}")  # (n_genes, n_clusters)
+        print(f"Column headers (safe keys): {cluster_medians.columns[:5].tolist()}")
 
     return cluster_medians
+
 
 def prep_medians(adata, cluster_header, use_mean = False, positive_genes_only = True):
     """\
