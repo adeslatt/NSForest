@@ -136,11 +136,13 @@ def prep_medians(adata, cluster_header, use_mean = False, positive_genes_only = 
     ## attach calculated medians to adata
     medians_key = build_varm_key("medians", cluster_header)
 
+    print("Final cluster_medians columns (should all be safe):", list(cluster_medians.columns))
     adata.varm[medians_key] = cluster_medians #gene-by-cluster
     store_key_mapping(adata, cluster_header, medians_key)
+    print("adata.varm keys now include:", list(adata.varm.keys()))
 
-    print("Saving calculated medians as adata.varm.medians_" + safe_cluster_key + "derived from " + cluster_header)
-    
+
+    print(f"Saving calculated medians as adata.varm.{medians_key} derived from {cluster_header}")
     print("--- %s seconds ---" % (time.time() - start_time))
     print("median:", cluster_medians.stack().median())
     print("mean:", cluster_medians.stack().mean())
