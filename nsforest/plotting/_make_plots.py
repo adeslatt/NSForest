@@ -138,7 +138,7 @@ def dotplot(adata, markers, cluster_header, *, dendrogram = True, save = False,
         groupby_key = get_original_key(adata, cluster_header)
         dendrogram = reverse_key_list(adata, dendrogram)
 
-            sc.pl.dotplot(
+        sc.pl.dotplot(
                 adata,
                 markers,
                 groupby_key,
